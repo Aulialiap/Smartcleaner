@@ -1,68 +1,68 @@
-% Fakta tentang penyakit dan gejalanya (dengan bobot untuk setiap gejala)
-penyakit(gasritis, [(bengkak_rahang_atau_pipi, 5), (mulut_luka, 2), (bibir_pecah_pecah, 2)]).
-penyakit(maag, [(napas_bau, 3), (muntah, 3)]).
-penyakit(tumor_lambung, [(sakit_perut, 3), (diare, 4), (darah_dan_lendir_di_kotoran, 5)]).
-penyakit(kanker_lambung, [
-    (perut_nyeri_pedih_dan_sesak_diatas_perut, 5),
-    (sering_sendawa_terutama_saat_lapar, 2),
-    (sulit_tidur_karena_nyeri_uluhati, 4),
-    (kehilangan_nafsu_makan, 3)
+% Facts about diseases and their symptoms (with weight for each symptom)
+disease(gastritis, [(swelling_of_jaw_or_cheek, 5), (mouth_ulcers, 2), (chapped_lips, 2)]).
+disease(ulcer, [(bad_breath, 3), (vomiting, 3)]).
+disease(stomach_tumor, [(stomach_pain, 3), (diarrhea, 4), (blood_and_mucus_in_stool, 5)]).
+disease(stomach_cancer, [
+    (severe_pain_and_tightness_above_the_stomach, 5),
+    (frequent_burping_especially_when_hungry, 2),
+    (difficulty_sleeping_due_to_stomach_pain, 4),
+    (loss_of_appetite, 3)
 ]).
-penyakit(gerd, [(sembelit_lebih_dari_tiga_hari, 4), (mual, 2), (sensasi_terbakar_di_dada, 4)]).
+disease(gerd, [(constipation_more_than_three_days, 4), (nausea, 2), (burning_sensation_in_chest, 4)]).
 
-% Fungsi untuk menanyakan gejala dengan jawaban ya/tidak
-tanya_gejala(Gejala) :-
-    format('Apakah Anda mengalami ~w? (ya/tidak): ', [Gejala]),
-    read(Jawaban),
-    (Jawaban == ya -> assertz(mengalami_gejala(Gejala)); fail).
+% Function to ask the user about symptoms with yes/no answers
+ask_symptom(Symptom) :-
+    format('Do you experience ~w? (yes/no): ', [Symptom]),
+    read(Answer),
+    (Answer == yes -> assertz(experienced_symptom(Symptom)); fail).
 
-% Fungsi untuk menghitung total bobot gejala yang cocok
-hitung_bobot_gejala([], _, 0).
-hitung_bobot_gejala([(Gejala, Bobot)|Sisa], GejalaDikenal, TotalBobot) :-
-    (member(Gejala, GejalaDikenal) -> Bobot1 is Bobot; Bobot1 is 0),
-    hitung_bobot_gejala(Sisa, GejalaDikenal, BobotSisa),
-    TotalBobot is Bobot1 + BobotSisa.
+% Function to calculate the total weight of the matched symptoms
+calculate_symptom_weight([], _, 0).
+calculate_symptom_weight([(Symptom, Weight)|Rest], KnownSymptoms, TotalWeight) :-
+    (member(Symptom, KnownSymptoms) -> Weight1 is Weight; Weight1 is 0),
+    calculate_symptom_weight(Rest, KnownSymptoms, RemainingWeight),
+    TotalWeight is Weight1 + RemainingWeight.
 
-% Fungsi diagnosis berdasarkan bobot gejala
-diagnosis_bobot(Penyakit, Gejala, GejalaDikenal, TotalBobot) :-
-    hitung_bobot_gejala(Gejala, GejalaDikenal, TotalBobot),
-    TotalBobot > 0, % Hanya menampilkan penyakit jika ada bobot yang cocok
-    format('Kemungkinan diagnosis: ~w (total bobot gejala cocok: ~2f)\n', [Penyakit, TotalBobot]).
+% Function to diagnose based on the weight of symptoms
+diagnosis_weight(Disease, Symptoms, KnownSymptoms, TotalWeight) :-
+    calculate_symptom_weight(Symptoms, KnownSymptoms, TotalWeight),
+    TotalWeight > 0, % Only display the disease if there are matching symptom weights
+    format('Possible diagnosis: ~w (total matching symptom weight: ~2f)\n', [Disease, TotalWeight]).
 
-% Memulai proses diagnosis
-mulai_diagnosis :-
-    retractall(mengalami_gejala(_)), % Reset gejala sebelumnya
-    % Mengumpulkan gejala dari pengguna
-    findall(Gejala, (
-        penyakit(_, GejalaList),
-        member((Gejala, _), GejalaList),
-        \+ mengalami_gejala(Gejala),
-        tanya_gejala(Gejala)
+% Start the diagnosis process
+start_diagnosis :-
+    retractall(experienced_symptom(_)), % Reset previous symptoms
+    % Collect symptoms from the user
+    findall(Symptom, (
+        disease(_, SymptomList),
+        member((Symptom, _), SymptomList),
+        \+ experienced_symptom(Symptom),
+        ask_symptom(Symptom)
     ), _),
-    % Mengumpulkan gejala yang telah dijawab ya
-    findall(G, mengalami_gejala(G), GejalaDikenal),
-    % Memproses diagnosis berdasarkan bobot
-    findall((Penyakit, TotalBobot), (
-        penyakit(Penyakit, GejalaList),
-        diagnosis_bobot(Penyakit, GejalaList, GejalaDikenal, TotalBobot)
-    ), Hasil),
-    % Menentukan penyakit dengan bobot terbesar
-    hasil_diagnosis(Hasil).
+    % Collect the symptoms that have been answered with yes
+    findall(S, experienced_symptom(S), KnownSymptoms),
+    % Process diagnosis based on weight
+    findall((Disease, TotalWeight), (
+        disease(Disease, SymptomList),
+        diagnosis_weight(Disease, SymptomList, KnownSymptoms, TotalWeight)
+    ), Results),
+    % Determine the disease with the highest weight
+    final_diagnosis(Results).
 
-% Fungsi untuk menemukan semua penyakit dengan bobot terbesar
-hasil_diagnosis([]) :-
-    write('Tidak ada penyakit yang cocok berdasarkan gejala yang diberikan.\n').
-hasil_diagnosis(Hasil) :-
-    sort(2, @>=, Hasil, HasilUrut), % Urutkan berdasarkan bobot
-    HasilUrut = [(DiagnosisPenyakit, BobotTerbesar)|_], % Ambil penyakit dengan bobot tertinggi
-    include(bobot_sama(BobotTerbesar), HasilUrut, PenyakitTertinggi), % Ambil semua penyakit dengan bobot tertinggi
-    format('Diagnosis akhir dengan bobot tertinggi (~2f):\n', [BobotTerbesar]),
-    forall(member((Penyakit, _), PenyakitTertinggi), format('- ~w\n', [Penyakit])).
+% Function to find all diseases with the highest weight
+final_diagnosis([]) :-
+    write('No disease matches the given symptoms.\n').
+final_diagnosis(Results) :-
+    sort(2, @>=, Results, SortedResults), % Sort by weight
+    SortedResults = [(DiagnosisDisease, HighestWeight)|_], % Take the disease with the highest weight
+    include(same_weight(HighestWeight), SortedResults, HighestWeightDiseases), % Take all diseases with the same highest weight
+    format('Final diagnosis with the highest weight (~2f):\n', [HighestWeight]),
+    forall(member((Disease, _), HighestWeightDiseases), format('- ~w\n', [Disease])).
 
-% Predicate untuk membandingkan bobot
-bobot_sama(Bobot, (_, Bobot)) :- !. % Membandingkan jika bobot sama
+% Predicate to compare weights
+same_weight(Weight, (_, Weight)) :- !. % Compare if the weights are the same
 
-% Memulai diagnosis dan mencetak hasil
+% Start the diagnosis and print the results
 run :-
-    mulai_diagnosis,
+    start_diagnosis,
     nl.
