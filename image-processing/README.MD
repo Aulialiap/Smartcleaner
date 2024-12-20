@@ -1,2 +1,1 @@
-#Image Processing and Rotation CUDA
 Image processing and Rotation using CUDA / GPU programming Application
