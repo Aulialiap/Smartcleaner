@@ -1,1 +1,1 @@
-# 1
+- Merupakan pengaplikasian sistem keamanan pintar "Smart Door" dalam konteks rumah pintar (smart home), sistem keamanan pintar memberikan kemampuan kepada pemilik rumah dengan memanfaatkan arduino uno dan beberapa komponen hardware lainya 
